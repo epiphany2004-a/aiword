@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: aiword-app
+    ports:
+      - "8000:8000"
+    environment:
+      DB_USER: root
+      DB_PASSWORD: Tang0312@
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: aiword_db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    container_name: aiword-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: Tang0312@
+      MYSQL_DATABASE: aiword_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pTang0312@"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  mysql_data:

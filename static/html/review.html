@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI单词助手 - 复习</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/review.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>AI单词助手</h1>
+            <div class="user-info">
+                <div class="progress-info">
+                    <i class="fas fa-tasks"></i>
+                    <span id="progressText">1/10</span>
+                </div>
+                <span id="username">用户</span>
+                <button id="backBtn" class="back-button">返回</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="review-card">
+                <!-- 问题区域 -->
+                <div class="question-section">
+                    <h2><i class="fas fa-question-circle"></i> 选择填空</h2>
+                    <p class="sentence" id="sentenceTemplate">
+                        She wore a ________ to avoid being recognized at the party.
+                    </p>
+                </div>
+
+                <!-- 选项区域 -->
+                <div class="options-section">
+                    <div class="options-grid">
+                        <div class="option-card" data-correct="true" onclick="selectOption(this)">
+                            <div class="option-content">
+                                <span class="word">disguise</span>
+                                <div class="definition" style="display: none;">
+                                    <span class="definition-text">v. 伪装；假扮 n. 伪装物</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="option-card" data-correct="false" onclick="selectOption(this)">
+                            <div class="option-content">
+                                <span class="word">disgust</span>
+                                <div class="definition" style="display: none;">
+                                    <span class="definition-text">n. & v. 厌恶，反感</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="option-card" data-correct="false" onclick="selectOption(this)">
+                            <div class="option-content">
+                                <span class="word">dismiss</span>
+                                <div class="definition" style="display: none;">
+                                    <span class="definition-text">v. 解散；解雇；不予理会</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="option-card" data-correct="false" onclick="selectOption(this)">
+                            <div class="option-content">
+                                <span class="word">dispute</span>
+                                <div class="definition" style="display: none;">
+                                    <span class="definition-text">n. & v. 争论，辩论；纠纷</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 主句解析区域 -->
+                <div class="explanation-section" id="explanationSection" style="display: none;">
+                    <h3><i class="fas fa-lightbulb"></i> 句子解析</h3>
+                    <div class="explanation-content">
+                        <p class="sentence-en" id="mainSentenceEn">
+                            She wore a <strong>disguise</strong> to avoid being recognized at the party.
+                        </p>
+                        <p class="sentence-cn" id="mainSentenceCn">
+                            她戴着伪装去参加派对，以避免被认出来。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 下一个按钮 -->
+                <div class="next-button-container" id="nextButtonContainer" style="display: none;">
+                    <button class="next-button">
+                        <i class="fas fa-arrow-right"></i> 下一个
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 现在: 从sessionStorage获取复习单词数据
+        function getWordsFromSession() {
+            const wordsDataJSON = sessionStorage.getItem('reviewWords');
+            if (wordsDataJSON) {
+                try {
+                    // (可选，但推荐) 获取后移除
+                    sessionStorage.removeItem('reviewWords');
+                    return JSON.parse(wordsDataJSON);
+                } catch (e) {
+                    console.error("无法从sessionStorage解析复习单词数据", e);
+                    return [];
+                }
+            }
+            return [];
+        }
+        const reviewWords = getWordsFromSession();
+        
+        let currentIndex = 0;
+        let isAnswered = false;
+        let pendingCorrect = null;
+        let pendingWordId = null;
+
+        // Fisher-Yates 洗牌算法
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // 渲染当前题目
+        function renderCurrentQuestion() {
+            if (!reviewWords.length) {
+                document.querySelector('.container').innerHTML = '<div style="text-align:center;padding:2em;font-size:1.2em;">暂无复习任务</div>';
+                return;
+            }
+            const data = reviewWords[currentIndex];
+            const content = data.review_content;
+            // 进度
+            document.getElementById('progressText').textContent = `${currentIndex + 1}/${reviewWords.length}`;
+            // 题干
+            document.getElementById('sentenceTemplate').textContent = content.sentence_template;
+            // 选项
+            const options = [...content.options]; // 拷贝数组
+            shuffleArray(options); // 打乱选项
+            const correct = content.correct_answer;
+            const optionGrid = document.querySelector('.options-grid');
+            optionGrid.innerHTML = '';
+            options.forEach(opt => {
+                const isCorrect = opt.word === correct;
+                const card = document.createElement('div');
+                card.className = 'option-card';
+                card.setAttribute('data-correct', isCorrect);
+                card.onclick = function() { selectOption(card); };
+                card.innerHTML = `<div class="option-content">
+                    <span class="word">${opt.word}</span>
+                    <div class="definition" style="display: none;">
+                        <span class="definition-text">${opt.definition}</span>
+                    </div>
+                </div>`;
+                optionGrid.appendChild(card);
+            });
+            // 句子解析
+            document.getElementById('mainSentenceEn').innerHTML = content.main_sentence_details.en;
+            document.getElementById('mainSentenceCn').textContent = content.main_sentence_details.cn;
+            // 隐藏解析和下一个按钮
+            document.getElementById('explanationSection').style.display = 'none';
+            document.getElementById('nextButtonContainer').style.display = 'none';
+            isAnswered = false;
+        }
+
+        async function submitProgress(word_id, correct) {
+            await fetch('/api/review/progress', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({word_id, correct})
+            });
+        }
+
+        function selectOption(selectedCard) {
+            if (isAnswered) return;
+            isAnswered = true;
+            // 禁用所有选项卡片的点击功能
+            const allCards = document.querySelectorAll('.option-card');
+            allCards.forEach(card => {
+                card.style.pointerEvents = 'none';
+            });
+            // 判断对错并更新UI
+            const isCorrect = selectedCard.getAttribute('data-correct') === 'true';
+            const word_id = reviewWords[currentIndex].word_id;
+            pendingCorrect = isCorrect;
+            pendingWordId = word_id;
+            // 立即高亮正确/错误
+            if (isCorrect) {
+                selectedCard.classList.add('correct');
+            } else {
+                selectedCard.classList.add('incorrect');
+                const correctCard = document.querySelector('.option-card[data-correct="true"]');
+                if (correctCard) correctCard.classList.add('correct');
+            }
+            // 显示所有选项的释义
+            showAllDefinitions();
+            // 显示主句解析和下一个按钮
+            showExplanation();
+        }
+
+        // 显示所有选项的释义
+        function showAllDefinitions() {
+            const optionCards = document.querySelectorAll('.option-card');
+            optionCards.forEach(card => {
+                const definition = card.querySelector('.definition');
+                const optionContent = card.querySelector('.option-content');
+                optionContent.style.transition = 'height 0.3s ease';
+                definition.style.display = 'block';
+                const newHeight = optionContent.scrollHeight;
+                optionContent.style.height = newHeight + 'px';
+                setTimeout(() => {
+                    definition.style.opacity = '1';
+                    definition.style.transform = 'translateY(0)';
+                }, 150);
+            });
+        }
+
+        // 显示主句解析
+        function showExplanation() {
+            const explanationSection = document.getElementById('explanationSection');
+            const nextButtonContainer = document.getElementById('nextButtonContainer');
+            explanationSection.style.display = 'block';
+            explanationSection.style.opacity = '0';
+            explanationSection.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                explanationSection.style.opacity = '1';
+                explanationSection.style.transform = 'translateY(0)';
+            }, 100);
+            setTimeout(() => {
+                nextButtonContainer.style.display = 'block';
+                nextButtonContainer.style.opacity = '0';
+                nextButtonContainer.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    nextButtonContainer.style.opacity = '1';
+                    nextButtonContainer.style.transform = 'translateY(0)';
+                }, 100);
+            }, 300);
+        }
+
+        async function handleNextQuestion() {
+            if (pendingWordId !== null && pendingCorrect !== null) {
+                await submitProgress(pendingWordId, pendingCorrect);
+                if (!pendingCorrect) {
+                    // 错误，将当前题 push 到队列最后
+                    reviewWords.push(reviewWords[currentIndex]);
+                }
+            }
+            pendingWordId = null;
+            pendingCorrect = null;
+            if (currentIndex < reviewWords.length - 1) {
+                currentIndex++;
+                renderCurrentQuestion();
+            } else {
+                alert('恭喜你，已完成今日复习！');
+                window.location.href = '/static/html/index.html';
+            }
+        }
+
+        // 修改下一个按钮事件
+        document.getElementById('nextButtonContainer').onclick = function(e) {
+            if (e.target.closest('.next-button')) {
+                handleNextQuestion();
+            }
+        };
+
+        // 返回按钮事件
+        document.getElementById('backBtn').addEventListener('click', function() {
+            if (confirm('确定要退出复习吗？当前进度将不会保存。')) {
+                window.location.href = '/static/html/index.html';
+            }
+        });
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            renderCurrentQuestion();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI单词助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/index.css">
+    <style>
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        .loading-text {
+            color: #333;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 添加加载动画遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">
+                <p>AI正在生成单词解释...</p>
+                <p class="pulse">请稍候</p>
+            </div>
+        </div>
+    </div>
+
+    <header>
+        <div class="header-content">
+            <h1>AI单词助手</h1>
+            <div class="user-info">
+                <div class="streak-info">
+                    <i class="fas fa-fire"></i>
+                    <span id="streakDays">7</span>天
+                </div>
+                <span id="username"></span>
+                <button id="logoutBtn" class="logout-button">退出</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <!-- 今日任务卡片 -->
+            <div class="card task-card">
+                <h2>今日任务</h2>
+                <div class="task-status">
+                    <button id="startTaskBtn" class="primary-button">
+                        开始学习 (30/50)
+                    </button>
+                    <button id="startReviewBtn" class="primary-button" style="margin-left: 10px; background-color: #4CAF50;">
+                        开始复习 (48/120)
+                    </button>
+                </div>
+                <div class="progress-section">
+                    <div class="progress-group">
+                        <label>新学进度</label>
+                        <div class="progress-bar">
+                            <div class="progress new-words" style="width: 60%;"></div>
+                        </div>
+                        <span>30 / 50 词</span>
+                    </div>
+                    <div class="progress-group">
+                        <label>复习进度</label>
+                        <div class="progress-bar">
+                            <div class="progress review-words" style="width: 0%;"></div>
+                        </div>
+                        <span>48 / 120 词</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 学习统计卡片 -->
+            <div class="card stats-card">
+                <h2>我的学习数据</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value">7</span>
+                        <span class="stat-label">连续学习</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">500</span>
+                        <span class="stat-label">总掌握量</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">30</span>
+                        <span class="stat-label">累计天数</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">85%</span>
+                        <span class="stat-label">学习效率 <i class="fas fa-chart-line"></i></span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="learningChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 词书卡片 -->
+            <div class="card wordbook-card">
+                <h2>我的词书</h2>
+                <div class="current-wordbook">
+                    <h3 id="currentBookName">加载中...</h3>
+                    <div class="wordbook-progress">
+                        <div class="progress-bar">
+                            <div class="progress" id="currentBookProgress" style="width: 0%;"></div>
+                        </div>
+                        <span id="currentBookStats">--</span>
+                    </div>
+                    <button class="change-wordbook-btn">更换词书</button>
+                </div>
+                <div class="wordbook-list" style="display: none;" id="wordbookList">
+                    <!-- 动态插入词书项 -->
+                </div>
+            </div>
+
+            <!-- 学习设置卡片 -->
+            <div class="card settings-card">
+                <h2>学习设置</h2>
+                <div class="settings">
+                    <div class="setting-item">
+                        <label for="dailyGoal">每日目标：</label>
+                        <input type="range" id="dailyGoal" min="1" max="200" value="50">
+                        <span class="value-display">50 词</span>
+                    </div>
+                    <div class="setting-item">
+                        <label for="reviewMode">复习模式：</label>
+                        <select id="reviewMode">
+                            <option value="1">标准模式</option>
+                            <option value="2">优先复习生词</option>
+                            <option value="3">拼写模式优先</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="pronunciation">默认发音：</label>
+                        <select id="pronunciation">
+                            <option value="1">美音</option>
+                            <option value="2">英音</option>
+                        </select>
+                    </div>
+                    <button id="saveSettings" class="save-button">保存设置</button>
+                </div>
+            </div>
+
+            <!-- AI实验室卡片 -->
+            <div class="card ai-lab-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 36px 0 32px 0;">
+                <h2 style="text-align:center; color:#6b8cff; font-size: 22px; margin-bottom: 24px; letter-spacing: 1px;">AI 作文批改</h2>
+                <button class="ai-feature-btn" style="display: flex; align-items: center; justify-content: center; font-size: 20px; padding: 18px 48px; background: linear-gradient(90deg, #6b8cff 0%, #ff6b8c 100%); color: #fff; border: none; border-radius: 12px; box-shadow: 0 4px 18px rgba(107,140,255,0.10); font-weight: 700; letter-spacing: 1px; transition: background 0.2s, box-shadow 0.2s; cursor: pointer;" onclick="window.location.href='/static/html/writing.html'">
+                    <i class="fas fa-comments" style="margin-right: 14px; font-size: 26px;"></i>
+                    进入 AI 作文批改
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // 检查登录状态
+        async function checkLoginStatus() {
+            try {
+                const response = await fetch('/api/check-login');
+                const data = await response.json();
+                
+                if (response.ok && data.status === "logged_in") {
+                    document.getElementById('username').textContent = data.username;
+                    // 加载用户设置
+                    loadUserSettings();
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('检查登录状态失败:', error);
+                window.location.href = '/';
+            }
+        }
+
+        // 加载用户设置
+        async function loadUserSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                if (response.ok) {
+                    const settings = await response.json();
+                    document.getElementById('dailyGoal').value = settings.daily_goal;
+                    document.getElementById('reviewMode').value = settings.review_mode;
+                    document.getElementById('pronunciation').value = settings.default_pronounce;
+                    window.currentBookId = settings.book_id;
+                    updateValueDisplay();
+                } else {
+                    const error = await response.json();
+                    console.error('加载设置失败:', error.detail);
+                }
+            } catch (error) {
+                console.error('加载设置失败:', error);
+            }
+        }
+
+        // 保存用户设置
+        async function saveUserSettings() {
+            const settings = {
+                daily_goal: parseInt(document.getElementById('dailyGoal').value),
+                review_goal: 50,  // 默认复习目标
+                review_mode: parseInt(document.getElementById('reviewMode').value),
+                default_pronounce: parseInt(document.getElementById('pronunciation').value),
+                book_id: window.currentBookId || 1
+            };
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(settings)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('设置已保存！');
+                    // 更新界面显示
+                    document.getElementById('dailyGoal').value = data.daily_goal;
+                    document.getElementById('reviewMode').value = data.review_mode;
+                    document.getElementById('pronunciation').value = data.default_pronounce;
+                    updateValueDisplay();
+                } else {
+                    const error = await response.json();
+                    console.error('保存设置失败:', error);
+                    alert(error.detail || '保存设置失败，请重试！');
+                }
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                alert('保存设置失败，请重试！');
+            }
+        }
+
+        // 保存设置按钮点击事件
+        document.getElementById('saveSettings').addEventListener('click', saveUserSettings);
+
+        // 页面加载时检查登录状态
+        checkLoginStatus();
+
+        // 退出登录
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('退出登录失败:', error);
+            }
+        });
+
+        // 更新滑块值显示
+        function updateValueDisplay() {
+            const value = document.getElementById('dailyGoal').value;
+            document.querySelector('.value-display').textContent = `${value} 词`;
+        }
+
+        // 为滑块添加事件监听器
+        document.getElementById('dailyGoal').addEventListener('input', updateValueDisplay);
+
+        // 初始化学习图表
+        async function initLearningChart() {
+            try {
+                const response = await fetch('/api/learning-stats/chart');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === "success") {
+                        const ctx = document.getElementById('learningChart').getContext('2d');
+                        new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: data.data.dates,
+                                datasets: [{
+                                    label: '新学单词',
+                                    data: data.data.new_words,
+                                    borderColor: 'rgb(75, 192, 192)',
+                                    tension: 0.1
+                                },
+                                {
+                                    label: '复习单词',
+                                    data: data.data.review_words,
+                                    borderColor: 'rgb(255, 99, 132)',
+                                    tension: 0.1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: {
+                                            display: true,
+                                            text: '单词数量'
+                                        }
+                                    },
+                                    x: {
+                                        title: {
+                                            display: true,
+                                            text: '日期'
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    legend: {
+                                        position: 'top',
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: '最近7天学习记录'
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('加载图表数据失败:', error);
+            }
+        }
+
+        // 动态加载词书列表并渲染
+        async function loadBooksAndRender() {
+            try {
+                const res = await fetch('/api/books');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const books = data.books;
+                    const currentBookId = window.currentBookId || 1;
+                    // 渲染当前词书
+                    const currentBook = books.find(b => b.book_id === currentBookId) || books[0];
+                    // 获取总掌握量
+                    let mastered = '--';
+                    try {
+                        const statsRes = await fetch('/api/learning-stats');
+                        const statsData = await statsRes.json();
+                        if (statsData.status === 'success') {
+                            mastered = statsData.data.mastered_words;
+                        }
+                    } catch (e) {}
+                    document.getElementById('currentBookName').textContent = currentBook.book_name;
+                    document.getElementById('currentBookStats').textContent = `已掌握 ${mastered} / ${currentBook.word_count} 词`;
+                    document.getElementById('currentBookProgress').style.width = (mastered !== '--' ? (100 * mastered / currentBook.word_count).toFixed(1) : 0) + '%';
+                    // 渲染词书列表
+                    const list = document.getElementById('wordbookList');
+                    list.innerHTML = '';
+                    books.forEach(book => {
+                        const item = document.createElement('div');
+                        item.className = 'wordbook-item';
+                        if (book.book_id === currentBookId) item.style.background = '#e6f7ff';
+                        item.innerHTML = `
+                            <h3>${book.book_name}</h3>
+                            <p>${book.word_count}词</p>
+                            <button class="select-button" ${book.book_id === currentBookId ? 'disabled' : ''}>${book.book_id === currentBookId ? '当前词书' : '选择'}</button>
+                        `;
+                        item.querySelector('.select-button').addEventListener('click', async function() {
+                            if (book.book_id === currentBookId) return;
+                            window.currentBookId = book.book_id;
+                            await saveUserSettings();
+                            await loadBooksAndRender();
+                            alert('词书切换成功！');
+                            document.getElementById('wordbookList').style.display = 'none';
+                        });
+                        list.appendChild(item);
+                    });
+                }
+            } catch (e) {
+                console.error('加载词书失败', e);
+            }
+        }
+
+        // 更换词书按钮
+        document.querySelector('.change-wordbook-btn').addEventListener('click', function() {
+            const wordbookList = document.getElementById('wordbookList');
+            wordbookList.style.display = wordbookList.style.display === 'none' ? 'grid' : 'none';
+        });
+
+        // 页面加载后自动渲染词书
+        document.addEventListener('DOMContentLoaded', function() {
+            updateValueDisplay();
+            initLearningChart();
+            loadLearningLogs();
+            loadLearningStats();  // 添加加载学习统计数据
+            loadUserSettings().then(loadBooksAndRender); // 先加载用户设置，再渲染词书
+        });
+
+        // 加载学习日志
+        async function loadLearningLogs() {
+            try {
+                const response = await fetch('/api/learning-logs');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === "success") {
+                        // 更新新学进度
+                        const newWordsProgress = (data.data.new_words_learned / data.data.daily_goal) * 100;
+                        document.querySelector('.new-words').style.width = `${newWordsProgress}%`;
+                        document.querySelector('.progress-group:nth-child(1) span').textContent = 
+                            `${data.data.new_words_learned} / ${data.data.daily_goal} 词`;
+                        
+                        // 更新复习进度
+                        const reviewProgress = (data.data.words_reviewed / data.data.total_review_words) * 100;
+                        document.querySelector('.review-words').style.width = `${reviewProgress}%`;
+                        document.querySelector('.progress-group:nth-child(2) span').textContent = 
+                            `${data.data.words_reviewed} / ${data.data.total_review_words} 词`;
+                        
+                        // 更新按钮文本
+                        document.getElementById('startTaskBtn').textContent = 
+                            `开始学习 (${data.data.new_words_learned}/${data.data.daily_goal})`;
+                        document.getElementById('startReviewBtn').textContent = 
+                            `开始复习 (${data.data.words_reviewed}/${data.data.total_review_words})`;
+                    }
+                }
+            } catch (error) {
+                console.error('加载学习日志失败:', error);
+            }
+        }
+
+        // 加载学习统计数据
+        async function loadLearningStats() {
+            try {
+                const response = await fetch('/api/learning-stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === "success") {
+                        // 更新连续学习天数
+                        document.querySelector('.stat-item:nth-child(1) .stat-value').textContent = 
+                            data.data.streak_days;
+                        
+                        // 更新总掌握量
+                        document.querySelector('.stat-item:nth-child(2) .stat-value').textContent = 
+                            data.data.mastered_words;
+                        
+                        // 更新累计天数
+                        document.querySelector('.stat-item:nth-child(3) .stat-value').textContent = 
+                            data.data.total_days;
+                        
+                        // 更新学习效率
+                        document.querySelector('.stat-item:nth-child(4) .stat-value').textContent = 
+                            data.data.efficiency;
+                    }
+                }
+            } catch (error) {
+                console.error('加载学习统计数据失败:', error);
+            }
+        }
+
+        // 显示加载动画
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        // 隐藏加载动画
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        // 修改startTask函数
+        document.getElementById('startTaskBtn').addEventListener('click', function() {
+            async function startTask() {
+                showLoading();
+                try {
+                    const response = await fetch('/api/start-task', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        // 现在: 将数据存入sessionStorage，然后跳转
+                        sessionStorage.setItem('learningWords', JSON.stringify(data.words));
+                        window.location.href = `/static/html/learning.html`;
+                    } else {
+                        alert('获取单词失败，请重试！');
+                    }
+                } catch (error) {
+                    console.error('启动任务失败:', error);
+                    alert('启动任务失败，请重试！');
+                } finally {
+                    hideLoading();
+                }
+            }
+            startTask();
+        });
+
+        // 添加开始复习按钮的事件处理
+        document.getElementById('startReviewBtn').addEventListener('click', function() {
+            async function startReview() {
+                showLoading();
+                try {
+                    const response = await fetch('/api/review_words', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        // 现在: 将数据存入sessionStorage，然后跳转
+                        sessionStorage.setItem('reviewWords', JSON.stringify(data.words));
+                        window.location.href = `/static/html/review.html`;
+                    } else {
+                        alert(data.detail || '获取复习单词失败，请重试！');
+                    }
+                } catch (error) {
+                    console.error('启动复习失败:', error);
+                    alert('启动复习失败，请重试！');
+                } finally {
+                    hideLoading();
+                }
+            }
+            startReview();
+        });
+    </script>
+</body>
+</html> 

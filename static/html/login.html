@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 单词助手</title>
+    <link rel="stylesheet" href="static/css/login.css">
+</head>
+<body>
+    <div class="login-container">
+        <h1>单词助手</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <input type="text" id="username" name="username" required placeholder="用户名">
+            </div>
+            <div class="form-group">
+                <input type="password" id="password" name="password" required placeholder="密码">
+            </div>
+            <div class="button-group">
+                <button type="submit" class="login-button">登录</button>
+                <button class="register-button" >注册</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('登录成功！');
+                    window.location.href = 'static/html/index.html';
+                } else {
+                    alert(data.detail || '登录失败，请重试！');
+                }
+            } catch (error) {
+                console.error('登录错误:', error);
+                alert('登录失败，请重试！');
+            }
+        });
+
+        document.querySelector('.register-button').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = '/register';
+        });
+    </script>
+</body>
+</html> 

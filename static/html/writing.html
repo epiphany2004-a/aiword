@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI写作工作室 - AI单词助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="../css/writing.css">
+</head>
+<body>
+
+    <a href="/static/html/index.html" id="back-to-index" style="position: fixed; top: 24px; left: 32px; z-index: 100; background: rgba(255,255,255,0.85); color: #6b8cff; border-radius: 8px; padding: 8px 18px; font-size: 16px; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(107,140,255,0.10); border: 1.5px solid #e9ecef; transition: background 0.2s, color 0.2s; display: inline-block;">
+        <i class="fas fa-arrow-left" style="margin-right: 7px;"></i>返回首页
+    </a>
+
+    <div id="input-mode-switcher">
+        <button id="mode-text-btn" class="mode-btn active">
+            <i class="fas fa-file-alt"></i> 文字输入
+        </button>
+        <button id="mode-image-btn" class="mode-btn">
+            <i class="fas fa-camera"></i> 图片输入
+        </button>
+        <button id="history-btn" style="margin-left: 16px; background: #fff; color: #6b8cff; border-radius: 8px; padding: 8px 18px; font-size: 16px; font-weight: 600; border: 1.5px solid #e9ecef; box-shadow: 0 2px 8px rgba(107,140,255,0.10); cursor: pointer;"><i class="fas fa-history" style="margin-right: 7px;"></i>历史记录</button>
+    </div>
+    <div id="history-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); z-index:2000; justify-content:center; align-items:flex-start; padding:20px;">
+      <div style="background:#fff; margin:40px auto 0 auto; border-radius:16px; max-width:600px; width:90vw; max-height:80vh; min-height:400px; box-shadow:0 8px 32px rgba(107,140,255,0.18); padding:32px 24px 24px 24px; position:relative; overflow:hidden; display:flex; flex-direction:column;">
+        <button id="close-history-modal" style="position:absolute; top:16px; right:16px; background:none; border:none; font-size:22px; color:#6b8cff; cursor:pointer; z-index:10;"><i class="fas fa-times"></i></button>
+        <h2 style="margin-bottom:18px; color:#6b8cff; font-size:20px; flex-shrink:0;">历史作文批改记录</h2>
+        <div id="history-list" style="flex:1; min-height:200px; max-height:350px; overflow-y:auto; padding-right:8px; margin-bottom:16px;"></div>
+        <div id="history-detail" style="display:none; flex:1; min-height:250px; max-height:400px; border-top:1px solid #eee; padding-top:16px; overflow-y:auto; padding-right:8px; padding-bottom:80px;"></div>
+      </div>
+    </div>
+
+    <div class="workspace">
+        <!-- 左栏：写作区 -->
+        <div class="writing-area">
+            <div id="input-section">
+                <!-- 作文题目输入区域 -->
+                <div id="essay-title-edit" style="margin-bottom: 18px; text-align: center;">
+                    <span id="essay-title-label" style="font-size: 17px; color: #6b8cff; font-weight: 600; margin-right: 10px; letter-spacing: 1px; vertical-align: top; display: inline-block; margin-top: 8px;">题目</span>
+                    <div style="display: inline-block; width: 80%; max-width: 600px; text-align: left;">
+                        <textarea id="essay-title-input" placeholder="请输入作文题目..." style="font-size: 16px; padding: 12px 16px; border-radius: 8px; border: 1.5px solid #6b8cff; width: 100%; min-height: 80px; resize: vertical; font-family: inherit; line-height: 1.5;"></textarea>
+                        <button id="essay-title-confirm" style="padding: 8px 16px; font-size: 14px; margin-top: 8px; background: linear-gradient(45deg, #6b8cff, #ff6b8c); color: #fff; border: none; border-radius: 6px; cursor: pointer; float: right;">确定</button>
+                    </div>
+                </div>
+                <!-- 题目插图上传（输入时） -->
+                <div id="title-upload-area" style="margin: 12px auto 18px auto; text-align: center;">
+
+                </div>
+                <!-- 作文题目展示区域（初始隐藏） -->
+                <div id="essay-title" style="display:none;">
+                    <div class="main-title" style="font-size: 18px; line-height: 1.6; text-align: left; margin-bottom: 12px; color: #333; font-weight: 600;">Suppose your university is organizing a forum on the development of students' cross-cultural communication abilities. You are now to write an essay to express your view. You should write at least 120 words but no more than 180 words.</div>
+                    
+                    <div class="title-divider" style="height: 2px; background: linear-gradient(45deg, #6b8cff, #ff6b8c); border-radius: 1px; margin: 20px 0;"></div>
+                    <button id="edit-title-btn" style="margin-top: 8px; font-size: 13px; background: #f7f8fa; color: #6b8cff; border: 1px solid #6b8cff; border-radius: 5px; padding: 4px 12px; cursor: pointer; float: right;">修改题目</button>
+                    <div style="clear: both;"></div>
+                </div>
+                <!-- 作文输入框 -->
+                <textarea id="essay-input" placeholder="请在此处输入您的作文..."></textarea>
+                <!-- 作文插图上传 -->
+                <div id="upload-area" style="margin: 18px auto 18px auto; text-align: center;">
+                </div>
+                <button id="analyze-btn">开始分析</button>
+            </div>
+            <div id="image-input-container" style="display: none;">
+                <div class="input-card">
+                    <div id="image-upload-box">
+                        <input type="file" id="essay-image-file-input" accept="image/*" style="display:none;" multiple>
+                        <div id="image-upload-placeholder">
+                             <i class="fas fa-cloud-upload-alt"></i>
+                             <p>点击上传作文图片 (可多选)</p>
+                             <span>支持 JPG, PNG, WEBP 格式</span>
+                        </div>
+                        <div id="image-preview-main"></div>
+                    </div>
+                    <button id="analyze-image-btn">分析图片中的作文</button>
+                </div>
+            </div>
+            <div id="result-container" style="display: none;"></div>
+        </div>
+
+        <!-- 右栏：AI分析面板（初始隐藏，分析后显示） -->
+        <aside class="analysis-panel" id="analysis-panel" style="display:none;">
+            <!-- AI评分模块 -->
+            <div class="panel-module">
+                <h2 class="panel-title"><i class="fas fa-tachometer-alt"></i> AI 评分</h2>
+                <div class="score-container">
+                    <span class="score-display"><span id="ai-score">16</span><span class="total"> / 20</span></span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="score-radar-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- 建议列表模块 -->
+            <div class="panel-module">
+                <h2 class="panel-title"><i class="fas fa-lightbulb"></i> 修改建议</h2>
+                <ul class="suggestion-list" id="suggestion-list">
+                    <!-- JS动态填充 -->
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Elements ---
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const inputSection = document.getElementById('input-section');
+    const resultContainer = document.getElementById('result-container');
+    const essayInput = document.getElementById('essay-input');
+    const suggestionList = document.getElementById('suggestion-list');
+    const aiScoreEl = document.getElementById('ai-score');
+    const analysisPanel = document.getElementById('analysis-panel');
+    // 新增：题目输入与展示
+    const essayTitleEdit = document.getElementById('essay-title-edit');
+    const essayTitleInput = document.getElementById('essay-title-input');
+    const essayTitle = document.getElementById('essay-title');
+    const editTitleBtn = document.getElementById('edit-title-btn');
+    const essaySubTitle = essayTitle.querySelector('.sub-title');
+    
+    // --- 新增：输入模式切换 ---
+    const modeTextBtn = document.getElementById('mode-text-btn');
+    const modeImageBtn = document.getElementById('mode-image-btn');
+    const imageInputContainer = document.getElementById('image-input-container');
+    const imageUploadBox = document.getElementById('image-upload-box');
+    const imageFileInput = document.getElementById('essay-image-file-input');
+    const imagePreviewMain = document.getElementById('image-preview-main');
+    const analyzeImageBtn = document.getElementById('analyze-image-btn');
+    const imageUploadPlaceholder = document.getElementById('image-upload-placeholder');
+    
+    // --- 题目确认按钮事件 ---
+    const essayTitleConfirm = document.getElementById('essay-title-confirm');
+    if (essayTitleConfirm) {
+        essayTitleConfirm.addEventListener('click', () => {
+            const titleText = essayTitleInput.value.trim();
+            if (titleText) {
+                essayTitle.querySelector('.main-title').textContent = titleText;
+                essayTitleEdit.style.display = 'none';
+                essayTitle.style.display = 'block';
+            }
+        });
+    }
+    
+    // --- 修改题目按钮事件 ---
+    if (editTitleBtn) {
+        editTitleBtn.addEventListener('click', () => {
+            essayTitle.style.display = 'none';
+            essayTitleEdit.style.display = 'block';
+        });
+    }
+    
+    modeTextBtn.addEventListener('click', () => {
+        modeTextBtn.classList.add('active');
+        modeImageBtn.classList.remove('active');
+        inputSection.style.display = 'block';
+        imageInputContainer.style.display = 'none';
+    });
+
+    modeImageBtn.addEventListener('click', () => {
+        modeImageBtn.classList.add('active');
+        modeTextBtn.classList.remove('active');
+        inputSection.style.display = 'none';
+        imageInputContainer.style.display = 'block';
+    });
+
+    imageUploadBox.addEventListener('click', () => {
+        imageFileInput.click();
+    });
+
+    imageFileInput.addEventListener('change', function() {
+        imagePreviewMain.innerHTML = ''; // 清空旧预览
+        if (this.files && this.files.length > 0) {
+            imageUploadPlaceholder.style.display = 'none';
+            imagePreviewMain.style.display = 'flex';
+            imagePreviewMain.style.flexWrap = 'wrap';
+            imagePreviewMain.style.gap = '10px';
+            imagePreviewMain.style.justifyContent = 'center';
+
+            Array.from(this.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imgContainer = document.createElement('div');
+                    imgContainer.classList.add('image-preview-item');
+                    imgContainer.innerHTML = `<img src="${e.target.result}" alt="预览"/>`;
+                    imagePreviewMain.appendChild(imgContainer);
+                };
+                reader.readAsDataURL(file);
+            });
+        } else {
+            imageUploadPlaceholder.style.display = 'block';
+            imagePreviewMain.style.display = 'none';
+        }
+    });
+
+    analyzeImageBtn.addEventListener('click', () => {
+        const imageFiles = imageFileInput.files;
+        if (!imageFiles || imageFiles.length === 0) {
+            alert('请先上传至少一张图片。');
+            return;
+        }
+        sendImageToBackend(imageFiles);
+    });
+
+    async function sendImageToBackend(imageFiles) {
+        try {
+            showLoading();
+            
+            const formData = new FormData();
+            Array.from(imageFiles).forEach(file => {
+                formData.append('essay_images', file);
+            });
+
+            const response = await fetch('/api/score-essay-from-image', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('后端返回数据:', data);
+                
+                if (data.status === 'success') {
+                    handleAnalysisResult(data, data.ocr_result);
+                } else {
+                    alert(data.message || '分析失败，请重试！');
+                }
+            } else {
+                const error = await response.json();
+                console.error('API请求失败:', error);
+                alert(`分析失败: ${error.detail || '请重试！'}`);
+            }
+        } catch (error) {
+            console.error('发送数据失败:', error);
+            alert('网络错误，请重试！');
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    // --- Sample Data ---
+   
+
+    // --- Event Listeners ---
+    analyzeBtn.addEventListener('click', handleAnalyze);
+
+    // --- Functions ---
+    function handleAnalyze() {
+        const text = essayInput.value.trim();
+        if (!text) {
+            alert('请输入内容后再进行分析。');
+            return;
+        }
+        
+        // 获取题目内容
+        const titleContent = essayTitle.querySelector('.main-title').textContent;
+        
+        // 获取图片数据
+        const titleImageData = getImageData('title-image-preview');
+        const essayImageData = getImageData('image-preview');
+        
+        // 发送到后端API
+        sendToBackend(titleContent, titleImageData, text, essayImageData);
+    }
+    
+    // 获取图片的base64数据
+    function getImageData(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return null;
+        const img = container.querySelector('img');
+        if (img && img.src) {
+            // 如果图片是base64格式，直接返回
+            if (img.src.startsWith('data:image')) {
+                return img.src;
+            }
+        }
+        return null;
+    }
+    
+    // 发送数据到后端
+    async function sendToBackend(title, titleImage, content, essayImage) {
+        try {
+            // 显示加载状态
+            showLoading();
+            
+            const requestData = {
+                essay_title: title,
+                essay_title_image: titleImage,
+                essay_content: content,
+                essay_image: essayImage
+            };
+            
+            console.log('发送数据到后端:', requestData);
+            
+            const response = await fetch('/api/essay-score', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('后端返回数据:', data);
+                
+                // 处理返回的数据
+                handleAnalysisResult(data);
+            } else {
+                const error = await response.json();
+                console.error('API请求失败:', error);
+                alert('分析失败，请重试！');
+            }
+        } catch (error) {
+            console.error('发送数据失败:', error);
+            alert('网络错误，请重试！');
+        } finally {
+            // 隐藏加载状态
+            hideLoading();
+        }
+    }
+    
+    // 显示加载动画
+    function showLoading() {
+        // 创建加载遮罩
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.id = 'loading-overlay';
+        loadingOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+        `;
+        
+        // 创建加载内容
+        const loadingContent = document.createElement('div');
+        loadingContent.style.cssText = `
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+        `;
+        
+        loadingContent.innerHTML = `
+            <div class="loading-spinner" style="
+                width: 60px;
+                height: 60px;
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #6b8cff;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin: 0 auto 20px auto;
+            "></div>
+            <h3 style="color: #333; margin-bottom: 10px; font-size: 18px;">AI正在分析作文...</h3>
+            <p style="color: #666; font-size: 14px; line-height: 1.5;">
+                正在使用DeepSeek AI对您的作文进行智能评分<br>
+                请稍候，这可能需要几秒钟时间
+            </p>
+            <div style="margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px; font-size: 12px; color: #666;">
+                <div>📝 分析逻辑结构</div>
+                <div>📚 评估词汇丰富度</div>
+                <div>🔤 检查句式多样性</div>
+                <div>✅ 验证语法准确性</div>
+                <div>🎯 评估论证相关性</div>
+            </div>
+        `;
+        
+        loadingOverlay.appendChild(loadingContent);
+        document.body.appendChild(loadingOverlay);
+        
+        // 添加CSS动画
+        if (!document.querySelector('#loading-styles')) {
+            const style = document.createElement('style');
+            style.id = 'loading-styles';
+            style.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    // 隐藏加载动画
+    function hideLoading() {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.remove();
+        }
+    }
+    
+    // 处理分析结果
+    function handleAnalysisResult(data, ocrResult = null) {
+        window.analysisResultData = data;
+        if (data.status === 'success') {
+            // 隐藏输入区域
+            inputSection.style.display = 'none';
+            imageInputContainer.style.display = 'none'; // 隐藏图片输入区
+            
+            // 题目显示到结果区上方
+            const resultEssayTitle = document.createElement('div');
+            resultEssayTitle.id = 'essay-title';
+            resultEssayTitle.style.cssText = 'margin-bottom: 12px; padding: 10px 18px; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #6b8cff; max-width: 600px; width: 100%; margin-left: auto; margin-right: auto; box-sizing: border-box;';
+            
+            // 如果有OCR结果，使用它；否则，从页面元素获取
+            const titleContentHTML = ocrResult 
+                ? ocrResult.title.replace(/\n/g, '<br>') 
+                : essayTitle.querySelector('.main-title').innerHTML;
+            const subTitleContent = ocrResult 
+                ? '' 
+                : (essaySubTitle ? essaySubTitle.textContent : '');
+            
+            resultEssayTitle.innerHTML = `
+                <div class="main-title" style="font-size: 15px; line-height: 1.5; text-align: left; margin-bottom: 6px; color: #333; font-weight: 600;">${titleContentHTML}</div>
+                <div class="sub-title" style="font-size: 13px; color: #666; text-align: left; margin-bottom: 8px; font-style: italic;">${subTitleContent}</div>
+                <div class="title-divider" style="height: 2px; background: linear-gradient(45deg, #6b8cff, #ff6b8c); border-radius: 1px; margin: 10px 0;"></div>
+            `;
+            // 确保只插入一次
+            const existingTitle = document.getElementById('result-container').parentNode.querySelector('#essay-title');
+            if(existingTitle) existingTitle.remove();
+            
+            resultContainer.parentNode.insertBefore(resultEssayTitle, resultContainer);
+            resultContainer.style.display = 'block';
+            analysisPanel.style.display = 'block';
+
+            // 初始化分析区块结构
+            resultContainer.innerHTML = `
+                <div class="polished-essay-text" id="polished-text-container"></div>
+            `;
+
+            const structureContainer = document.createElement('div');
+            structureContainer.id = 'essay-structure-container';
+            resultContainer.after(structureContainer);
+
+            // 使用OCR结果或输入框内容渲染
+            const essayTextToRender = ocrResult ? ocrResult.writing : essayInput.value;
+
+            // 渲染分析结果到各自区块
+            renderPolishedText(essayTextToRender, data.suggestions);
+            renderSuggestions(data.suggestions);
+            renderCharts(data.radar_data);
+            aiScoreEl.textContent = data.score;
+            renderEssayStructure(); // 渲染结构
+            addSuggestionListeners(); // 添加采纳等事件
+        } else {
+            alert(data.message || '分析失败，请重试！');
+        }
+    }
+
+    function normalizeForMatch(str) {
+        // 去除前后空格、换行、句末标点，多个空白合并为一个
+        return str.trim().replace(/[\s\n]+/g, ' ').replace(/[.?!。？！,，；;、\s]+$/g, '').toLowerCase();
+    }
+
+    function renderPolishedText(text, suggestions) {
+        // 1. 先将所有建议按原文出现顺序排序，避免嵌套高亮
+        let sortedSuggestions = suggestions.slice().sort((a, b) => {
+            const aIndex = text.indexOf(a.text);
+            const bIndex = text.indexOf(b.text);
+            if (aIndex === -1) return 1;
+            if (bIndex === -1) return -1;
+            return aIndex - bIndex;
+        });
+        // 2. 构建一个替换映射，避免多次replace冲突
+        let markMap = {};
+        let markId = 0;
+        let markedText = text;
+        sortedSuggestions.forEach(item => {
+            if (!item.text || text.indexOf(item.text) === -1) return;
+            const mark = `__HIGHLIGHT_MARK_${markId}__`;
+            markMap[mark] = item;
+            markedText = markedText.split(item.text).join(mark);
+            markId++;
+        });
+        // 3. 渲染高亮和标签
+        Object.keys(markMap).forEach(mark => {
+            const item = markMap[mark];
+            let labelMap = {
+                upgradeable: '可升级',
+                repetitive: '重复',
+                incorrect: '错误',
+                sentence_structure: '句式'
+            };
+            let label = `<span class="highlight-label ${item.type}">${labelMap[item.type]||item.type}</span>`;
+            markedText = markedText.replaceAll(mark, `${label}<span class="highlight ${item.type}" data-suggestion-id="${item.id}">${item.text}</span>`);
+        });
+        // 渲染到polished-text-container
+        const polishedDiv = document.getElementById('polished-text-container');
+        if (polishedDiv) polishedDiv.innerHTML = markedText.replace(/\n/g, '<br>');
+        addHighlightListeners();
+    }
+    
+    function renderSuggestions(suggestions) {
+        suggestionList.innerHTML = '';
+        suggestions.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'suggestion-item';
+            li.dataset.suggestionId = item.id;
+            
+            const typeIcons = {
+                upgradeable: 'fa-level-up-alt',
+                repetitive: 'fa-sync-alt',
+                incorrect: 'fa-exclamation-triangle',
+                sentence_structure: 'fa-random'
+            };
+            const typeLabels = {
+                upgradeable: '词汇升级',
+                repetitive: '重复使用',
+                incorrect: '用词不当',
+                sentence_structure: '句式优化'
+            };
+
+            li.innerHTML = `
+                <div class="suggestion-header">
+                    <i class="fas ${typeIcons[item.type]||'fa-lightbulb'}"></i>
+                    <span>${typeLabels[item.type]||item.type}</span>
+                </div>
+                <div class="suggestion-body">
+                    <span class="original-text">${item.text}</span>
+                    <i class="fas fa-arrow-right arrow"></i>
+                    <span class="suggested-text">${item.suggestion}</span>
+                </div>
+                <div class="suggestion-actions">
+                    <button class="action-btn adopt">采纳</button>
+                    <button class="action-btn ignore">忽略</button>
+                </div>
+            `;
+            suggestionList.appendChild(li);
+        });
+    }
+
+    function renderCharts(radarData) {
+        // 清空旧图表（如果有）
+        const chartContainer = document.querySelector('.chart-container');
+        chartContainer.innerHTML = '<canvas id="score-radar-chart"></canvas>';
+        const ctx = document.getElementById('score-radar-chart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['逻辑结构', '词汇丰富度', '句式多样性', '语法准确性', '论证相关性'],
+                datasets: [{
+                    label: 'AI评分',
+                    data: radarData,
+                    backgroundColor: 'rgba(107,140,255,0.18)',
+                    borderColor: 'rgba(107,140,255,1)',
+                    pointBackgroundColor: 'rgba(107,140,255,1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(107,140,255,1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { display: false },
+                        suggestedMin: 0,
+                        suggestedMax: 4,
+                        ticks: { stepSize: 1 }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+
+
+    function addHighlightListeners() {
+        document.querySelectorAll('.highlight').forEach(el => {
+            el.addEventListener('click', () => {
+                const suggestionId = el.dataset.suggestionId;
+                scrollToSuggestion(suggestionId);
+            });
+        });
+    }
+
+    function addSuggestionListeners() {
+        document.querySelectorAll('.suggestion-item').forEach(item => {
+            const suggestionId = item.dataset.suggestionId;
+            const suggestion = window.analysisResultData.suggestions.find(s => s.id == suggestionId);
+
+            // Click on item to scroll to text
+            item.addEventListener('click', (e) => {
+                 if(e.target.classList.contains('action-btn')) return;
+                 scrollToHighlight(suggestionId);
+            });
+            
+            // Adopt button
+            item.querySelector('.action-btn.adopt').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const highlightEl = document.querySelector(`.highlight[data-suggestion-id="${suggestionId}"]`);
+                
+                if(highlightEl && !item.classList.contains('adopted-item')) {
+                    const originalText = highlightEl.textContent;
+                    highlightEl.outerHTML = `<span class="adopted-text" data-suggestion-id="${suggestionId}" data-original-text="${encodeURIComponent(originalText)}">${suggestion.suggestion}</span>`;
+
+                    item.classList.add('adopted-item');
+                    const actions = item.querySelector('.suggestion-actions');
+                    actions.innerHTML = '<button class="action-btn cancel-adopt">取消采纳</button>';
+                    
+                    actions.querySelector('.cancel-adopt').addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        const adoptedEl = document.querySelector(`.adopted-text[data-suggestion-id="${suggestionId}"]`);
+                        if(adoptedEl) {
+                           const originalRestoredText = decodeURIComponent(adoptedEl.dataset.originalText);
+                           adoptedEl.outerHTML = `<span class="highlight ${suggestion.type}" data-suggestion-id="${suggestionId}">${originalRestoredText}</span>`;
+                           addHighlightListeners(); // Re-bind click since element was replaced
+                        }
+                        item.classList.remove('adopted-item');
+                        actions.innerHTML = `
+                            <button class="action-btn adopt">采纳</button>
+                            <button class="action-btn ignore">忽略</button>`;
+                        addSuggestionListeners(); // Re-bind all listeners
+                    });
+                }
+            });
+
+            // Ignore button
+            item.querySelector('.action-btn.ignore').addEventListener('click', (e) => {
+                e.stopPropagation();
+                item.classList.toggle('adopted-item');
+            });
+        });
+    }
+
+    function scrollToSuggestion(id) {
+        document.querySelectorAll('.suggestion-item.active-suggestion, .highlight.active-highlight').forEach(el => el.classList.remove('active-suggestion', 'active-highlight'));
+        const suggestionItem = document.querySelector(`.suggestion-item[data-suggestion-id="${id}"]`);
+        if (suggestionItem) {
+            suggestionItem.classList.add('active-suggestion');
+            suggestionItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const highlightEl = document.querySelector(`.highlight[data-suggestion-id="${id}"]`);
+            if(highlightEl) highlightEl.classList.add('active-highlight');
+        }
+    }
+    
+    function scrollToHighlight(id) {
+        document.querySelectorAll('.suggestion-item.active-suggestion, .highlight.active-highlight').forEach(el => el.classList.remove('active-suggestion', 'active-highlight'));
+        const highlightEl = document.querySelector(`.highlight[data-suggestion-id="${id}"], .adopted-text[data-suggestion-id="${id}"]`);
+        if (highlightEl) {
+            highlightEl.classList.add('active-highlight');
+            highlightEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const suggestionItem = document.querySelector(`.suggestion-item[data-suggestion-id="${id}"]`);
+            if(suggestionItem) suggestionItem.classList.add('active-suggestion');
+        }
+    }
+
+    // --- 历史记录弹窗逻辑 ---
+    const historyBtn = document.getElementById('history-btn');
+    const historyModal = document.getElementById('history-modal');
+    const closeHistoryModal = document.getElementById('close-history-modal');
+    const historyList = document.getElementById('history-list');
+    const historyDetail = document.getElementById('history-detail');
+
+    historyBtn.addEventListener('click', () => {
+        historyModal.style.display = 'flex';
+        loadHistoryList();
+    });
+    closeHistoryModal.addEventListener('click', () => {
+        historyModal.style.display = 'none';
+        historyDetail.style.display = 'none';
+    });
+    function loadHistoryList() {
+        historyList.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">加载中...</div>';
+        fetch('/api/essay-history').then(r => r.json()).then(data => {
+            if (!data.length) {
+                historyList.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">暂无历史记录</div>';
+                return;
+            }
+            historyList.innerHTML = '';
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.style = 'padding:12px 0; border-bottom:1px solid #f0f0f0; cursor:pointer;';
+                div.innerHTML = `<b style='color:#6b8cff;'>${item.essay_title}</b> <span style='color:#888; font-size:13px;'>${item.created_at}</span> <span style='float:right; color:#ff6b8c; font-weight:600;'>${item.score}分</span>`;
+                div.addEventListener('click', () => showHistoryDetail(item));
+                historyList.appendChild(div);
+            });
+        });
+    }
+    function showHistoryDetail(item) {
+        historyDetail.style.display = 'block';
+        historyDetail.innerHTML = `
+          <div style='font-size:17px; color:#6b8cff; font-weight:600; margin-bottom:8px;'>${item.essay_title}</div>
+          <div style='color:#888; font-size:13px; margin-bottom:8px;'>${item.created_at}</div>
+          <div style='margin-bottom:12px;'><b>分数：</b><span style='color:#ff6b8c; font-size:16px;'>${item.score}</span></div>
+          <div style='margin-bottom:12px;'><b>内容：</b><div style='background:#f8f9fa; border-radius:8px; padding:12px; margin-top:4px; font-size:15px; line-height:1.6; max-height:120px; overflow-y:auto;'>${item.essay_content.replace(/\n/g,'<br>')}</div></div>
+          <div style='margin-bottom:12px;'><b>建议：</b><div style='background:#f8f9fa; border-radius:8px; padding:12px; margin-top:4px; max-height:120px; overflow-y:auto;'><ul style='margin:0; padding-left:18px; line-height:1.5;'>${(item.suggestions||[]).map(s=>`<li style='margin-bottom:8px;'>${s.text} → <span style='color:#6b8cff;'>${s.suggestion}</span></li>`).join('')}</ul></div></div>
+          <div style='margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; position:sticky; bottom:0; background:#fff; padding:8px 0; border-top:1px solid #eee;'>
+            <button style='background:#6b8cff; color:#fff; border:none; border-radius:6px; padding:6px 18px; font-size:15px; cursor:pointer;' onclick='document.getElementById("history-detail").style.display="none";'>关闭详情</button>
+            <button id="apply-history-btn" style='background:#ff6b8c; color:#fff; border:none; border-radius:6px; padding:6px 18px; font-size:15px; cursor:pointer;'>应用本条记录</button>
+          </div>
+        `;
+        // 应用本条记录按钮逻辑
+        setTimeout(() => {
+          const applyBtn = document.getElementById('apply-history-btn');
+          if(applyBtn) {
+            applyBtn.onclick = function() {
+              // 题目
+              essayTitleInput.value = item.essay_title;
+              essayTitle.querySelector('.main-title').textContent = item.essay_title;
+              essayTitleEdit.style.display = 'none';
+              essayTitle.style.display = 'block';
+              // 内容
+              essayInput.value = item.essay_content;
+              // 建议（渲染到分析区）
+              // 触发分析区渲染（模拟AI返回）
+              handleAnalysisResult({
+                status: 'success',
+                score: item.score,
+                radar_data: item.radar_data,
+                suggestions: item.suggestions,
+                message: '历史记录回显',
+              });
+              historyModal.style.display = 'none';
+              historyDetail.style.display = 'none';
+            };
+          }
+        }, 0);
+    }
+});
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI单词助手 - 学习</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/learning.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>AI单词助手</h1>
+            <div class="user-info">
+                <div class="streak-info">
+                    <i class="fas fa-fire"></i>
+                    <span id="streakDays">7</span>天
+                </div>
+                <span id="username"></span>
+                <button id="backBtn" class="back-button">返回</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="word-card">
+                <!-- 单词区域 -->
+                <div class="word-section">
+                    <h1 class="word" id="currentWord">disguise</h1>
+                    <div class="phonetic">
+                        <span id="phonetic">/dɪsˈɡaɪz/</span>
+                        <button class="pronounce-btn" onclick="playPronunciation()">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 释义区域 -->
+                <div class="definition-section">
+                    <h2><i class="fas fa-book"></i> 中文释义</h2>
+                    <ul id="definitions">
+                        <li><span class="part-of-speech">n.</span> 伪装；掩饰；伪装物</li>
+                        <li><span class="part-of-speech">v.</span> 伪装；掩饰；假扮</li>
+                    </ul>
+                </div>
+
+                <!-- AI助记区域 -->
+                <div class="mnemonic-section">
+                    <h2><i class="fas fa-lightbulb"></i> AI 助记</h2>
+                    <div class="mnemonic-content">
+                        <div class="mnemonic-item">
+                            <h3><i class="fas fa-music"></i> 谐音助记</h3>
+                            <p id="homophone">dis- (音近 "this", 这) + guise (音近 "guy's", 家伙的) -> "这不是这个家伙的脸" -> 因为他进行了伪装。</p>
+                        </div>
+                        <div class="mnemonic-item">
+                            <h3><i class="fas fa-puzzle-piece"></i> 词根词缀</h3>
+                            <p id="etymology">dis- (否定，不同) + guise (外貌，样子) -> 使外貌变得不同 -> 伪装。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 例句区域 -->
+                <div class="example-section">
+                    <h2><i class="fas fa-comment-dots"></i> 情景例句</h2>
+                    <div class="example-content">
+                        <p class="en" id="exampleEn">He disguised himself as a woman.</p>
+                        <p class="cn" id="exampleCn">他把自己伪装成一个女人。</p>
+                    </div>
+                </div>
+
+                <!-- 操作按钮区域 -->
+                <div class="action-buttons">
+                    <button class="btn btn-prev" onclick="showPrevWord()" id="prevBtn" style="display: none;">
+                        <i class="fas fa-arrow-left"></i> 上一个
+                    </button>
+                    <button class="btn btn-dont-know" onclick="handleDontKnow()">
+                        <i class="fas fa-times"></i> 不认识
+                    </button>
+                    <button class="btn btn-unsure" onclick="handleUnsure()">
+                        <i class="fas fa-question"></i> 不确定
+                    </button>
+                    <button class="btn btn-know" onclick="handleKnow()" id="knowBtn">
+                        <i class="fas fa-check"></i> 认识
+                    </button>
+                    <button class="btn btn-confirm" onclick="confirmKnow()" id="confirmBtn" style="display: none;">
+                        <i class="fas fa-check-double"></i> 下一个
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 现在: 从sessionStorage获取单词列表
+        const wordsDataJSON = sessionStorage.getItem('learningWords');
+        const wordsData = wordsDataJSON ? JSON.parse(wordsDataJSON) : [];
+        
+        // (可选，但推荐) 获取数据后立即从sessionStorage中移除，防止刷新页面时重复使用旧数据
+        if (wordsDataJSON) {
+            sessionStorage.removeItem('learningWords');
+        }
+        
+        let currentWordIndex = 0;
+        let wordHistory = []; // 用于记录学习历史
+
+        // 检查登录状态
+        async function checkLoginStatus() {
+            try {
+                const response = await fetch('/api/check-login');
+                const data = await response.json();
+                
+                if (response.ok && data.status === "logged_in") {
+                    document.getElementById('username').textContent = data.username;
+                    // 如果已登录且有单词数据，则显示第一个单词
+                    if (wordsData.length > 0) {
+                        updateWordContent(wordsData[0]);
+                        wordHistory.push(0); // 记录第一个单词的索引
+                    } else {
+                        // 显示完成目标的消息
+                        showCompletionMessage();
+                    }
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('检查登录状态失败:', error);
+                window.location.href = '/';
+            }
+        }
+
+        // 显示完成目标的消息
+        function showCompletionMessage() {
+            const container = document.querySelector('.container');
+            container.innerHTML = `
+                <div class="completion-card">
+                    <div class="completion-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h2>恭喜你，已完成今日目标！</h2>
+                    <p>继续保持，明天继续加油！</p>
+                    <div class="completion-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>今日目标已完成</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="goBack()">
+                        <i class="fas fa-home"></i> 返回首页
+                    </button>
+                </div>
+            `;
+        }
+
+        // 返回首页
+        function goBack() {
+            window.location.href = '/static/html/index.html';
+        }
+
+        // 更新页面内容
+        function updateWordContent(wordData) {
+            try {
+                const content = JSON.parse(wordData.content);
+                
+                // 更新单词和音标
+                document.getElementById('currentWord').textContent = content.word;
+                document.getElementById('phonetic').textContent = content.phonetic;
+
+                // 更新释义
+                const definitionsList = document.getElementById('definitions');
+                definitionsList.innerHTML = content.definitions.map(def => 
+                    `<li><span class="part-of-speech">${def.partOfSpeech}</span> ${def.meaning}</li>`
+                ).join('');
+
+                // 更新助记
+                document.getElementById('homophone').textContent = content.mnemonics.homophone;
+                document.getElementById('etymology').textContent = content.mnemonics.etymology;
+
+                // 更新例句
+                if (content.examples && content.examples.length > 0) {
+                    document.getElementById('exampleEn').textContent = content.examples[0].en;
+                    document.getElementById('exampleCn').textContent = content.examples[0].cn;
+                }
+
+                // 更新进度显示
+                updateProgress();
+                
+                // 更新按钮状态
+                updateButtonStates();
+            } catch (error) {
+                console.error('更新单词内容失败:', error);
+                alert('单词数据格式错误，请重试！');
+                window.location.href = '/html/index.html';
+            }
+        }
+
+        // 更新按钮状态
+        function updateButtonStates() {
+            // 显示/隐藏返回上一个按钮
+            const prevBtn = document.getElementById('prevBtn');
+            prevBtn.style.display = currentWordIndex > 0 ? 'block' : 'none';
+            
+            // 重置认识按钮状态
+            document.getElementById('knowBtn').style.display = 'block';
+            document.getElementById('confirmBtn').style.display = 'none';
+        }
+
+        // 更新学习进度
+        function updateProgress() {
+            const progress = Math.round(((currentWordIndex + 1) / wordsData.length) * 100);
+            document.getElementById('streakDays').textContent = `${currentWordIndex + 1}/${wordsData.length}`;
+        }
+
+        // 播放发音
+        function playPronunciation() {
+            const word = document.getElementById('currentWord').textContent;
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US';
+            speechSynthesis.speak(utterance);
+        }
+
+        // 处理按钮点击事件
+        async function handleDontKnow() {
+            await saveProgress('dont_know');
+            showNextWord();
+        }
+
+        async function handleUnsure() {
+            await saveProgress('unsure');
+            showNextWord();
+        }
+
+        function handleKnow() {
+            // 显示确认按钮，隐藏认识按钮
+            document.getElementById('knowBtn').style.display = 'none';
+            document.getElementById('confirmBtn').style.display = 'block';
+        }
+
+        async function confirmKnow() {
+            await saveProgress('know');
+            showNextWord();
+        }
+
+        // 显示上一个单词
+        function showPrevWord() {
+            if (currentWordIndex > 0) {
+                currentWordIndex--;
+                updateWordContent(wordsData[currentWordIndex]);
+            }
+        }
+
+        // 显示下一个单词
+        function showNextWord() {
+            currentWordIndex++;
+            if (currentWordIndex < wordsData.length) {
+                updateWordContent(wordsData[currentWordIndex]);
+            } else {
+                // 学习完成
+                alert('恭喜完成今日学习！');
+                window.location.href = '/static/html/index.html';
+            }
+        }
+
+        // 保存学习进度
+        async function saveProgress(status) {
+            try {
+                const currentWord = wordsData[currentWordIndex];
+                const response = await fetch('/api/save-progress', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        word_id: currentWord.word_id,
+                        status: status
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('保存进度失败');
+                }
+            } catch (error) {
+                console.error('保存进度失败:', error);
+                alert('保存进度失败，请重试！');
+            }
+        }
+
+        // 返回按钮点击事件
+        document.getElementById('backBtn').addEventListener('click', function() {
+            if (confirm('确定要退出学习吗？当前进度将不会保存。')) {
+                window.location.href = '/static/html/index.html';
+            }
+        });
+
+        // 初始化页面
+        checkLoginStatus();
+    </script>
+</body>
+</html>

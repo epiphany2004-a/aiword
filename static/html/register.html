@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - AI单词助手</title>
+    <link rel="stylesheet" href="static/css/register.css">
+</head>
+<body>
+    <div class="login-container">
+        <h1>注册账号</h1>
+        <form id="registerForm">
+            <div class="form-group">
+                <input type="text" id="username" name="username" required placeholder="用户名">
+            </div>
+            <div class="form-group">
+                <input type="email" id="email" name="email" required placeholder="邮箱">
+            </div>
+            <div class="form-group">
+                <input type="password" id="password" name="password" required placeholder="密码">
+            </div>
+            <div class="form-group">
+                <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="确认密码">
+            </div>
+            <div class="button-group">
+                <button type="submit" class="login-button">注册</button>
+                <a href="/" class="register-button">返回登录</a>
+            </div>
+        </form>
+    </div>
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); // 阻止表单默认提交行为
+            
+            // 获取表单数据
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // 验证邮箱格式
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(email)) {
+                alert('请输入有效的邮箱地址！');
+                return;
+            }
+            
+            // 验证密码是否匹配
+            if (password !== confirmPassword) {
+                alert('两次输入的密码不一致！');
+                return;
+            }
+            
+            try {
+                // 发送注册请求
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        password: password
+                    })
+                });
+
+                if (response.ok) {
+                    // 注册成功，重定向到登录页面
+                    alert('注册成功，请登录！');
+                    window.location.href = '/';
+
+                } else {
+                    // 获取错误信息
+                    const error = await response.json();
+                    alert(error.detail || '注册失败，请重试！');
+                }
+            } catch (error) {
+                console.error('注册错误:', error);
+                alert('注册失败，请重试！');
+            }
+        });
+    </script>
+</body>
+</html> 

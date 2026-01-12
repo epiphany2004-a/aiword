@@ -1,0 +1,22 @@
+# FastAPI 核心框架
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# 数据库相关
+sqlalchemy==2.0.23
+mysql-connector-python==8.2.0
+
+# 数据验证
+pydantic==2.5.2
+email-validator==2.1.0
+
+# 认证和安全
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
+
+# AI 服务
+openai>=1.0.0
+google-genai>=0.2.0
+google
