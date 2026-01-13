@@ -27,10 +27,16 @@
   - 使用 DeepSeek 对作文进行打分和多维度分析（见 `api/agent.py` 中 `deepseek_agent_get_essay_structure`）
 - **前端界面**
   - `static/html/login.html`：登录 / 注册
+    <img width="642" height="509" alt="image" src="https://github.com/user-attachments/assets/5d9fab65-4482-4584-85e0-4d149d29ece4" />
   - `static/html/index.html`：首页看板、开始学习 / 复习、学习设置、词书选择、AI 作文入口
+    <img width="1091" height="1015" alt="image" src="https://github.com/user-attachments/assets/f8fbfd15-b6ca-4a2b-b1a4-cbca6d34367b" />
   - `static/html/learning.html`：单词学习页（AI 助记与例句）
+    <img width="986" height="975" alt="image" src="https://github.com/user-attachments/assets/ab13a051-06d4-4156-984d-cb30062c1bd3" />
   - `static/html/review.html`：句子填空复习页
+    <img width="976" height="981" alt="image" src="https://github.com/user-attachments/assets/b065ae32-be1d-427b-9224-a2464e179688" />
   - `static/html/writing.html`：AI 作文批改页
+    <img width="1301" height="692" alt="image" src="https://github.com/user-attachments/assets/8dba07d0-02db-4e2a-876b-aeb85d34305d" />
+
 
 ---
 
